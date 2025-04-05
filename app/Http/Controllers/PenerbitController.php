@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 
 class PenerbitController extends Controller
 {
+    //============== API ==================
+
     //READ (GET ALL): Ambil semua data penerbit beserta buku yang diterbitkan
     public function index()
     {
@@ -76,5 +78,65 @@ class PenerbitController extends Controller
         //Jika penerbit ketemu
         $penerbit->delete(); //Hapus data penerbit dari database
         return response()->json(['message' => 'Penerbit berhasil dihapus']); //Return success message dalam format JSON
+    }
+
+    //============== Web View ==================
+
+    //Tampilin halaman daftar semua penerbit
+    public function listPenerbit()
+    {
+        $penerbits = Penerbit::all(); //Ambil semua penerbit dari database
+        return view('penerbit.index', compact('penerbits')); //Return ke view 'penerbit/index' dan kirim data penerbit ke view
+    }
+
+    //Tampilin halaman tambah penerbit
+    public function createForm()
+    {
+        return view('penerbit.create'); //Return view 'penerbit/create'
+    }
+
+    //Simpan penerbit baru dari form ke database
+    public function storeForm(Request $request)
+    {
+        //Validasi form input
+        $validated = $request->validate([
+            'nama' => 'required|string|max:255', //Nama wajib diisi, bertipe string, max 255 karakter
+            'alamat' => 'nullable|string', ///Alamat boleh kosong, jika diisi harus string
+            'tlep' => 'nullable|string|max:15', //Nomor telepon boleh kosong, jika diisi harus string max 15 karakter
+        ]);
+
+        Penerbit::create($validated); //Simpan data yang udah divalidasi ke database
+        return redirect()->route('penerbit.view')->with('success', 'Penerbit berhasil ditambahkan!'); //Redirect ke halaman daftar penerbit
+    }
+
+    //Tampilin halaman edit penerbit
+    public function editForm($id)
+    {
+        $penerbit = Penerbit::findOrFail($id); //Cari penerbit berdasarkan ID, kalau ga ketemu error 404
+        return view('penerbit.edit', compact('penerbit')); //Tampilin view 'penerbit/edit' dengan data penerbit
+    }
+
+    //Update data penerbit dari form edit
+    public function updateForm(Request $request, $id)
+    {
+        $penerbit = Penerbit::findOrFail($id); //Cari penerbit berdasarkan ID
+
+        //Validasi form input
+        $validated = $request->validate([
+            'nama' => 'required|string|max:255', //Nama wajib diisi, bertipe string, max 255 karakter
+            'alamat' => 'nullable|string', //Alamat boleh kosong, jika diisi harus string
+            'tlep' => 'nullable|string|max:15', //Nomor telepon boleh kosong, jika diisi harus string max 15 karakter
+        ]);
+
+        $penerbit->update($validated); //Update data penerbit dengan data yang divalidasi
+        return redirect()->route('penerbit.view')->with('success', 'Penerbit berhasil diperbarui!'); //Redirect ke halaman daftar penerbit
+    }
+
+    //Hapus penerbit dari database berdasarkan ID
+    public function deleteForm($id)
+    {
+        $penerbit = Penerbit::findOrFail($id); //Cari penerbit berdasarkan ID
+        $penerbit->delete(); //Hapus data penerbit
+        return redirect()->route('penerbit.view')->with('success', 'Penerbit berhasil dihapus!'); //Redirect ke halaman daftar penerbit
     }
 }

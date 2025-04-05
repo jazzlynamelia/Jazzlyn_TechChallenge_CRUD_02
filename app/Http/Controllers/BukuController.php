@@ -7,6 +7,8 @@ use Illuminate\Http\Request;
 
 class BukuController extends Controller
 {
+    //============== API ==================
+
     //READ (GET ALL): Ambil semua data buku
     public function index()
     {
@@ -81,5 +83,76 @@ class BukuController extends Controller
         //Jika buku ketemu
         $buku->delete(); //Hapus buku dari database
         return response()->json(['message' => 'Buku berhasil dihapus']); //Return success message dalam format JSON
+    }
+
+    //============== Web View ==================
+    
+    //Tampilin halaman daftar semua buku
+    public function listBuku()
+    {
+        $bukus = Buku::with(['penulis', 'penerbit'])->get(); //Ambil semua buku beserta relasi penulis dan penerbit
+        return view('buku.index', compact('bukus')); //Return ke view 'buku/index' dan kirim data buku ke view
+    }
+
+    //Tampilin halaman tambah buku
+    public function createForm()
+    {
+        $penulis = \App\Models\Penulis::all(); //Ambil semua data penulis dengan dropdown
+        $penerbit = \App\Models\Penerbit::all(); //Ambil semua data penerbit dengan dropdown
+        return view('buku.create', compact('penulis', 'penerbit')); //Return view 'buku/create' serta kirim data pernulis dan penerbit
+    }
+
+    //Simpan buku baru dari form ke database
+    public function storeForm(Request $request)
+    {
+        //Validasi form input
+        $validated = $request->validate([
+            'judul' => 'required|string|max:255', //Judul wajib diisi, bertipe string, max 255 karakter
+            'tahun_terbit' => 'required|integer', //Tahun terbit wajib diisi, bertipe angka bulat
+            'stok' => 'required|integer|min:0', //Stok wajib diisi, bertipe angka bulat, tidak boleh negatif
+            'isbn' => 'required|string|unique:bukus,isbn', //ISBN wajib diisi, bertipe string, unik agar ga redundan
+            'penulis_id' => 'required|exists:penulis,id', //Penulis_id wajib diisi, harus ada di tabel penulis
+            'penerbit_id' => 'required|exists:penerbit,id', //Penerbit_id wajib diisi, harus ada di tabel penerbit
+        ]);
+
+        Buku::create($validated); //Simpan data yang uda divalidasi ke database
+        return redirect()->route('buku.view')->with('success', 'Buku berhasil ditambahkan!'); //Redirect ke halaman daftar buku dengan success message
+    }
+
+    //Tampilin halaman edit buku
+    public function editForm($id)
+    {
+        $buku = Buku::findOrFail($id); //Cari buk berdasarkan ID, jika ga ditemuin otomatis error 404
+        $penulis = \App\Models\Penulis::all(); //Ambil semua data penulis untuk dropdown di form
+        $penerbit = \App\Models\Penerbit::all(); //Ambil semua data penerbit untuk dropdown di form
+        return view('buku.edit', compact('buku', 'penulis', 'penerbit')); //Tampilin view 'buku/edit' dengan data buku, penulis, dan penerbit
+    }
+
+    //Update data buku dari form edit
+    public function updateForm(Request $request, $id)
+    {
+        $buku = Buku::findOrFail($id); //Cari buku berdasarkan ID, jika tidak ketemu akan error 404
+
+        //Validasi form input
+        $validated = $request->validate([
+            'judul' => 'required|string|max:255', //Judul wajib diisi, bertipe string, max 255 karakter
+            'tahun_terbit' => 'required|integer', //Tahun terbit wajib diisi, bertipe angka bulat
+            'stok' => 'required|integer|min:0', //Stok wajib diisi, bertipe angka bulat, tidak boleh negatif
+            'isbn' => 'required|string|unique:bukus,isbn,' . $id, //ISBN wajib diisi, bertipe string, unik agar ga redundan
+            'penulis_id' => 'required|exists:penulis,id', //Penulis_id wajib diisi, harus ada di tabel penulis
+            'penerbit_id' => 'required|exists:penerbit,id', //Penerbit_id wajib diisi, harus ada di tabel penerbit
+        ]);
+
+        $buku->update($validated); //update data buku dengan yang telah divalidasi
+        return redirect()->route('buku.view')->with('success', 'Buku berhasil diperbarui!'); //Redirect ke halaman daftar buku dengan success message
+    }
+
+    //Hapus buku dari database berdasarkan ID
+    public function deleteForm($id)
+    {
+        $buku = Buku::findOrFail($id); //Cari buku berdasarkan ID, jika tidak ketemu error 404
+        $buku->delete(); //Hapus data buku
+
+        return redirect()->route('buku.view')->with('success', 'Buku berhasil dihapus!'); //Redirect kembali ke halaman daftar buku dengan success message
     }
 }
